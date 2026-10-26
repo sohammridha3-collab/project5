@@ -29,3 +29,7 @@ Thumbs.db
 
 # Legacy folder
 AI-Video-Assistant-/
+
+# IDE & Agents
+.agents/
+.claude/

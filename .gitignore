@@ -16,6 +16,7 @@ env/
 # Audio / Temp / Download artifacts
 temp/
 downloads/
+downloades/
 *.mp3
 *.wav
 *.mp4

@@ -29,10 +29,12 @@ langchain-huggingface>=0.0.3      # LangChain ↔ HuggingFace embeddings bridge
 huggingface-hub>=0.23.0           # Model downloading from HuggingFace Hub
 tiktoken>=0.7.0                   # Token counting for text splitting
 
-# ── Streamlit UI ──────────────────────────────────────────────────────────────
+# ── Web Frameworks & UI ────────────────────────────────────────────────────────
 streamlit>=1.35.0
 streamlit-extras>=0.4.0           # Additional Streamlit widgets / utilities
-watchdog>=4.0.0                   # File-change watcher (improves Streamlit hot-reload)
+fastapi>=0.115.0                  # FastAPI REST API backend
+uvicorn[standard]>=0.30.0         # ASGI production server
+watchdog>=4.0.0                   # File-change watcher (improves hot-reload)
 
 # ── PDF & TXT Export ──────────────────────────────────────────────────────────
 reportlab>=4.2.0                  # PDF generation

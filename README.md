@@ -103,6 +103,13 @@ SARVAM_API_KEY=your_sarvam_api_key_here
 streamlit run app.py
 ```
 
+### Run FastAPI Backend Server
+
+```bash
+python api.py
+```
+> Server will boot up and display clickable local server and Swagger API documentation links (`http://127.0.0.1:8000/docs`).
+
 ### Run via Command-Line Interface (CLI)
 
 ```bash

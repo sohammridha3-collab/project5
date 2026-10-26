@@ -1,4 +1,6 @@
 import os
+import socket
+import sys
 from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -6,18 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
 
-from main import run_pipeline
-from core.rag_engine import ask_question, load_rag_chain
-
 load_dotenv()
 
 app = FastAPI(
     title="AI Video Assistant API",
-    description="Backend API for transcribing videos, generating summaries, extracting action items, and conversational RAG chat.",
+    description="Backend REST API for transcribing videos, generating summaries, extracting action items, and conversational RAG chat.",
     version="1.0.0",
 )
 
-# Enable CORS for local frontends (React, Vue, Streamlit, etc.)
+# Enable CORS for frontend clients (React, Vue, Streamlit, etc.)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,7 +36,7 @@ class ProcessVideoRequest(BaseModel):
     source: str = Field(
         ...,
         description="YouTube URL or local path to audio/video file",
-        example="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        json_schema_extra={"example": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"},
     )
     language: Optional[str] = Field(
         "english",
@@ -49,7 +48,7 @@ class ChatRequest(BaseModel):
     question: str = Field(
         ...,
         description="Question to ask about the processed meeting transcript",
-        example="What were the main action items discussed?",
+        json_schema_extra={"example": "What were the main action items discussed?"},
     )
 
 
@@ -59,11 +58,14 @@ def root():
     return {
         "status": "online",
         "message": "AI Video Assistant API is running successfully!",
+        "documentation": {
+            "swagger_ui": "/docs",
+            "redoc": "/redoc",
+        },
         "endpoints": {
-            "docs": "http://127.0.0.1:8000/docs",
-            "redoc": "http://127.0.0.1:8000/redoc",
-            "process_video": "POST http://127.0.0.1:8000/process",
-            "chat": "POST http://127.0.0.1:8000/chat",
+            "process_video": "POST /process",
+            "chat": "POST /chat",
+            "health": "GET /health",
         },
     }
 
@@ -85,6 +87,7 @@ def process_video(request: ProcessVideoRequest):
     5. Builds the Chroma vector database and RAG chain
     """
     try:
+        from main import run_pipeline
         result = run_pipeline(source=request.source, language=request.language or "english")
 
         # Save rag_chain in memory for chat queries
@@ -115,6 +118,7 @@ def chat_with_meeting(request: ChatRequest):
     rag_chain = current_session.get("rag_chain")
     if not rag_chain:
         try:
+            from core.rag_engine import load_rag_chain
             rag_chain = load_rag_chain()
             current_session["rag_chain"] = rag_chain
         except Exception:
@@ -124,6 +128,7 @@ def chat_with_meeting(request: ChatRequest):
             )
 
     try:
+        from core.rag_engine import ask_question
         answer = ask_question(rag_chain, request.question)
         return {
             "question": request.question,
@@ -133,13 +138,26 @@ def chat_with_meeting(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def find_available_port(preferred_port: int = 8000) -> int:
+    """Finds an available TCP port starting from the preferred port."""
+    for port in [preferred_port, 8001, 8080, 8081, 5000]:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.5)
+            # connect_ex != 0 means port is free to bind
+            if s.connect_ex(("127.0.0.1", port)) != 0:
+                return port
+    return preferred_port
+
+
 if __name__ == "__main__":
     host = "127.0.0.1"
-    port = 8000
-    print("=" * 70)
-    print("🚀 Starting FastAPI Server...")
-    print(f"🌐 Localhost Server Link: http://{host}:{port}")
-    print(f"📖 Interactive Swagger Docs: http://{host}:{port}/docs")
-    print(f"📚 ReDoc Documentation:    http://{host}:{port}/redoc")
-    print("=" * 70)
+    port = find_available_port(preferred_port=8000)
+
+    print("\n" + "=" * 65)
+    print(" 🚀 FastAPI Server is Starting...")
+    print(f" 🌐 Running Server URL:     http://{host}:{port}")
+    print(f" 📖 Interactive Swagger UI: http://{host}:{port}/docs")
+    print(f" 📚 Alternative ReDoc Docs: http://{host}:{port}/redoc")
+    print("=" * 65 + "\n")
+
     uvicorn.run("api:app", host=host, port=port, reload=True)
